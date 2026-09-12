@@ -12,7 +12,7 @@ assignments:
     assignment_name: apim_keyvault
     source: azurerm_user_assigned_identity.apim_identity
     target: azurerm_key_vault.team_kv
-    role: Reader
+    role: Key Vault Secrets User
 
   - id: SEARCH_STORAGE
     description: AI Search identity must read documents from Storage
