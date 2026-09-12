@@ -1,5 +1,15 @@
+# Security-owned RBAC baseline.
+#
+# Each entry defines an approved identity-to-resource permission relationship.
+# Terraform is not allowed to deviate from these values.
+#
+# The custom Checkov policy reads this file during CI/CD and compares each
+# controlled azurerm_role_assignment against the expected source, target,
+# and Azure RBAC role.
+
 assignments:
 
+  # APIM managed identity is allowed to call Azure AI Content Safety.
   - id: APIM_CONTENT_SAFETY
     description: APIM identity must access Content Safety
     assignment_name: apim_content_safety
@@ -7,6 +17,7 @@ assignments:
     target: azurerm_cognitive_account.content_safety
     role: Cognitive Services User
 
+  # APIM managed identity is allowed to retrieve secrets from the team Key Vault.
   - id: APIM_KEYVAULT
     description: APIM identity must access the team Key Vault
     assignment_name: apim_keyvault
@@ -14,6 +25,7 @@ assignments:
     target: azurerm_key_vault.team_kv
     role: Key Vault Secrets User
 
+  # AI Search managed identity is allowed to read documents from Storage.
   - id: SEARCH_STORAGE
     description: AI Search identity must read documents from Storage
     assignment_name: search_storage

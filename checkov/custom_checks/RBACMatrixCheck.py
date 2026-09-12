@@ -1,4 +1,15 @@
-from __future__ import annotations
+"""
+Custom Checkov policy for enforcing the security-owned RBAC matrix.
+
+Flow:
+1. Checkov scans Terraform.
+2. This policy runs for every azurerm_role_assignment.
+3. The Terraform assignment name is matched against security/rbac-matrix.yaml.
+4. Source identity, target resource, and RBAC role are compared.
+5. Any deviation returns FAILED and causes the CI/CD security check to fail.
+
+No Azure deployment or Azure API call is required.
+"""
 
 from pathlib import Path
 from typing import Any
@@ -10,48 +21,28 @@ from checkov.terraform.checks.resource.base_resource_check import BaseResourceCh
 
 
 class RBACMatrixCheck(BaseResourceCheck):
+    """Validate Terraform RBAC assignments against the approved RBAC matrix."""
 
     def __init__(self) -> None:
-        name = "Ensure Terraform RBAC assignments comply with security RBAC matrix"
-        check_id = "CKV_CUSTOM_AZURE_RBAC_001"
-
-        supported_resources = (
-            "azurerm_role_assignment",
-        )
-
-        categories = (
-            CheckCategories.IAM,
-        )
-
         super().__init__(
-            name=name,
-            id=check_id,
-            categories=categories,
-            supported_resources=supported_resources,
+            name="Ensure Terraform RBAC assignments comply with security RBAC matrix",
+            id="CKV_CUSTOM_AZURE_RBAC_001",
+            categories=(CheckCategories.IAM,),
+            supported_resources=("azurerm_role_assignment",),
         )
 
         self.matrix = self._load_matrix()
 
-    def _load_matrix(self) -> dict[str, Any]:
-        """
-        Repository layout expected:
+    @staticmethod
+    def _load_matrix() -> dict[str, Any]:
+        """Load the security-owned RBAC baseline from the repository."""
 
-        repo/
-        ├── security/
-        │   └── rbac-matrix.yaml
-        └── checkov/
-            └── custom_checks/
-                └── RBACMatrixCheck.py
-        """
-
-        current_file = Path(__file__).resolve()
-
-        repo_root = current_file.parent.parent.parent
+        repo_root = Path(__file__).resolve().parents[2]
         matrix_file = repo_root / "security" / "rbac-matrix.yaml"
 
         if not matrix_file.exists():
             raise FileNotFoundError(
-                f"RBAC matrix not found: {matrix_file}"
+                f"RBAC matrix was not found: {matrix_file}"
             )
 
         with matrix_file.open("r", encoding="utf-8") as file:
@@ -59,12 +50,15 @@ class RBACMatrixCheck(BaseResourceCheck):
 
     @staticmethod
     def _first_value(conf: dict[str, Any], key: str) -> Any:
+        """
+        Checkov represents many Terraform attributes as lists.
+        Return the first value in a consistent form.
+        """
+
         value = conf.get(key)
 
         if isinstance(value, list):
-            if not value:
-                return None
-            return value[0]
+            return value[0] if value else None
 
         return value
 
@@ -72,6 +66,7 @@ class RBACMatrixCheck(BaseResourceCheck):
         self,
         assignment_name: str,
     ) -> dict[str, Any] | None:
+        """Find the security requirement controlling this Terraform assignment."""
 
         for requirement in self.matrix.get("assignments", []):
             if requirement.get("assignment_name") == assignment_name:
@@ -81,16 +76,14 @@ class RBACMatrixCheck(BaseResourceCheck):
 
     def scan_resource_conf(
         self,
-        conf: dict[str, list[Any]],
+        conf: dict[str, Any],
     ) -> CheckResult:
+        """
+        Checkov invokes this method for every azurerm_role_assignment.
 
-        #
-        # Checkov normally exposes Terraform resource address
-        # in __address__.
-        #
-        # Example:
-        # azurerm_role_assignment.apim_keyvault
-        #
+        Example Checkov address:
+            azurerm_role_assignment.apim_keyvault
+        """
 
         address = self._first_value(conf, "__address__")
 
@@ -99,14 +92,10 @@ class RBACMatrixCheck(BaseResourceCheck):
 
         assignment_name = str(address).split(".")[-1]
 
-        requirement = self._find_requirement(
-            assignment_name
-        )
+        requirement = self._find_requirement(assignment_name)
 
-        #
-        # If the role assignment isn't part of the controlled
-        # RBAC matrix, this policy does not enforce it.
-        #
+        # Assignments not included in the matrix are currently outside the
+        # scope of this specific control.
         if requirement is None:
             return CheckResult.PASSED
 
@@ -126,42 +115,21 @@ class RBACMatrixCheck(BaseResourceCheck):
         )
 
         expected_role = requirement["role"]
+        expected_scope = f"{requirement['target']}.id"
+        expected_principal = f"{requirement['source']}.principal_id"
 
-        expected_scope = (
-            f"{requirement['target']}.id"
-        )
-
-        expected_principal = (
-            f"{requirement['source']}.principal_id"
-        )
-
-        errors = []
-
-        if actual_role != expected_role:
-            errors.append(
-                f"Expected role '{expected_role}', "
-                f"found '{actual_role}'"
-            )
-
-        if actual_scope != expected_scope:
-            errors.append(
-                f"Expected scope '{expected_scope}', "
-                f"found '{actual_scope}'"
-            )
-
-        if actual_principal != expected_principal:
-            errors.append(
-                f"Expected principal '{expected_principal}', "
-                f"found '{actual_principal}'"
-            )
-
-        if errors:
-            self.details = errors
+        if (
+            actual_role != expected_role
+            or actual_scope != expected_scope
+            or actual_principal != expected_principal
+        ):
             return CheckResult.FAILED
 
         return CheckResult.PASSED
 
     def get_evaluated_keys(self):
+        """Terraform attributes evaluated by this custom Checkov policy."""
+
         return [
             "role_definition_name",
             "scope",
@@ -169,4 +137,5 @@ class RBACMatrixCheck(BaseResourceCheck):
         ]
 
 
+# Register the custom policy with Checkov.
 check = RBACMatrixCheck()
