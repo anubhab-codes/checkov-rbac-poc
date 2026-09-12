@@ -12,10 +12,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Python dependencies
+      - name: Install dependencies
         run: |
-          pip install pyyaml
+          pip install pyyaml checkov
 
       - name: Validate RBAC matrix
         run: |
           python scripts/validate-rbac.py
+
+      - name: Run Checkov
+        run: |
+          checkov \
+            -d terraform \
+            --framework terraform
