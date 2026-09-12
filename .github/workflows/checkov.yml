@@ -5,20 +5,25 @@ on:
   pull_request:
 
 jobs:
-  checkov:
+  rbac-validation:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Checkov
-        run: pip install checkov
+      - name: Install dependencies
+        run: |
+          pip install checkov pyyaml
 
-      - name: Run RBAC policy
+      - name: Generate RBAC policies
+        run: |
+          python scripts/generate-rbac-policies.py
+
+      - name: Run Checkov RBAC validation
         run: |
           checkov \
             -d terraform \
             --framework terraform \
-            --external-checks-dir checkov \
-            --check CKV2_CUSTOM_AZURE_001
+            --external-checks-dir checkov/generated \
+            --check CKV2_CUSTOM_AZURE_1001,CKV2_CUSTOM_AZURE_1002,CKV2_CUSTOM_AZURE_1003

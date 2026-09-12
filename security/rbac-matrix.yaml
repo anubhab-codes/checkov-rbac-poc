@@ -1,0 +1,19 @@
+assignments:
+
+  - id: APIM_CONTENT_SAFETY
+    description: APIM identity must access Content Safety
+    source_type: azurerm_user_assigned_identity
+    target_type: azurerm_cognitive_account
+    role: Cognitive Services User
+
+  - id: APIM_KEYVAULT
+    description: APIM identity must access the team Key Vault
+    source_type: azurerm_user_assigned_identity
+    target_type: azurerm_key_vault
+    role: Key Vault Secrets User
+
+  - id: SEARCH_STORAGE
+    description: AI Search identity must read documents from Storage
+    source_type: azurerm_user_assigned_identity
+    target_type: azurerm_storage_account
+    role: Storage Blob Data Reader
