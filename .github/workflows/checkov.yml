@@ -1,29 +1,21 @@
-name: Checkov RBAC Validation
+name: Terraform Security Validation
 
 on:
   push:
   pull_request:
 
 jobs:
-  rbac-validation:
+  security-validation:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
-          pip install checkov pyyaml
+          pip install pyyaml
 
-      - name: Generate RBAC policies
+      - name: Validate RBAC matrix
         run: |
-          python scripts/generate-rbac-policies.py
-
-      - name: Run Checkov RBAC validation
-        run: |
-          checkov \
-            -d terraform \
-            --framework terraform \
-            --external-checks-dir checkov/generated \
-            --check CKV2_CUSTOM_AZURE_1001,CKV2_CUSTOM_AZURE_1002,CKV2_CUSTOM_AZURE_1003
+          python scripts/validate-rbac.py
