@@ -72,7 +72,7 @@ resource "azurerm_role_assignment" "apim_content_safety" {
 resource "azurerm_role_assignment" "apim_keyvault" {
   scope = azurerm_key_vault.team_kv.id
 
-  role_definition_name = "Key Vault Secrets User"
+  role_definition_name = "Reader"
 
   principal_id = azurerm_user_assigned_identity.apim_identity.principal_id
 }
