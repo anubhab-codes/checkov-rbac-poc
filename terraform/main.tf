@@ -21,7 +21,7 @@ resource "azurerm_cognitive_account" "content_safety" {
 resource "azurerm_role_assignment" "apim_content_safety" {
   scope = azurerm_cognitive_account.content_safety.id
 
-  role_definition_name = "Cognitive Services User"
+  role_definition_name = "Reader"
 
   principal_id = azurerm_user_assigned_identity.apim_identity.principal_id
 }
