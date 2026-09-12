@@ -1,34 +1,17 @@
-# Security-owned RBAC baseline.
+# Security-owned RBAC matrix
 #
-# Each entry defines an approved identity-to-resource permission relationship.
-# Terraform is not allowed to deviate from these values.
-#
-# The custom Checkov policy reads this file during CI/CD and compares each
-# controlled azurerm_role_assignment against the expected source, target,
-# and Azure RBAC role.
+# Each row follows:
+# [source, role, terraform_assignment_name]
 
-assignments:
+targets:
 
-  # APIM managed identity is allowed to call Azure AI Content Safety.
-  - id: APIM_CONTENT_SAFETY
-    description: APIM identity must access Content Safety
-    assignment_name: apim_content_safety
-    source: azurerm_user_assigned_identity.apim_identity
-    target: azurerm_cognitive_account.content_safety
-    role: Cognitive Services User
+  azurerm_cognitive_account.content_safety:
+    - [azurerm_user_assigned_identity.apim_identity, "Cognitive Services User", apim_content_safety]
 
-  # APIM managed identity is allowed to retrieve secrets from the team Key Vault.
-  - id: APIM_KEYVAULT
-    description: APIM identity must access the team Key Vault
-    assignment_name: apim_keyvault
-    source: azurerm_user_assigned_identity.apim_identity
-    target: azurerm_key_vault.team_kv
-    role: Key Vault Secrets User
+  azurerm_key_vault.team_kv:
+    - [azurerm_user_assigned_identity.apim_identity, "Key Vault Secrets User", apim_keyvault]
+    - [azurerm_user_assigned_identity.app_identity, "Key Vault Secrets User", app_keyvault]
 
-  # AI Search managed identity is allowed to read documents from Storage.
-  - id: SEARCH_STORAGE
-    description: AI Search identity must read documents from Storage
-    assignment_name: search_storage
-    source: azurerm_user_assigned_identity.search_identity
-    target: azurerm_storage_account.documents
-    role: Storage Blob Data Reader
+  azurerm_storage_account.documents:
+    - [azurerm_user_assigned_identity.search_identity, "Storage Blob Data Reader", search_storage]
+    - [azurerm_user_assigned_identity.app_identity, "Storage Blob Data Contributor", app_storage]

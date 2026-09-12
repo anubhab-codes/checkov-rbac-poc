@@ -19,6 +19,12 @@ resource "azurerm_user_assigned_identity" "search_identity" {
   resource_group_name = azurerm_resource_group.demo.name
 }
 
+resource "azurerm_user_assigned_identity" "app_identity" {
+  name                = "uami-app"
+  location            = azurerm_resource_group.demo.location
+  resource_group_name = azurerm_resource_group.demo.name
+}
+
 # --------------------------------------------------
 # Resources
 # --------------------------------------------------
@@ -78,4 +84,16 @@ resource "azurerm_role_assignment" "search_storage" {
   role_definition_name = "Storage Blob Data Reader"
 
   principal_id = azurerm_user_assigned_identity.search_identity.principal_id
+}
+
+resource "azurerm_role_assignment" "app_keyvault" {
+  scope                = azurerm_key_vault.team_kv.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = azurerm_user_assigned_identity.app_identity.principal_id
+}
+
+resource "azurerm_role_assignment" "app_storage" {
+  scope                = azurerm_storage_account.documents.id
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = azurerm_user_assigned_identity.app_identity.principal_id
 }

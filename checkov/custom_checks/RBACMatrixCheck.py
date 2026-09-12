@@ -66,11 +66,25 @@ class RBACMatrixCheck(BaseResourceCheck):
         self,
         assignment_name: str,
     ) -> dict[str, Any] | None:
-        """Find the security requirement controlling this Terraform assignment."""
+        """
+        Find the matrix row for this Terraform role assignment.
 
-        for requirement in self.matrix.get("assignments", []):
-            if requirement.get("assignment_name") == assignment_name:
-                return requirement
+        Matrix row format:
+            [source, role, assignment_name]
+        """
+
+        for target, assignments in self.matrix.get("targets", {}).items():
+
+            for row in assignments:
+                source, role, matrix_assignment_name = row
+
+                if matrix_assignment_name == assignment_name:
+                    return {
+                        "source": source,
+                        "target": target,
+                        "role": role,
+                        "assignment_name": matrix_assignment_name,
+                    }
 
         return None
 
